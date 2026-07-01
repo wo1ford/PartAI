@@ -109,25 +109,44 @@ onMounted(load)
       </template>
     </PageHeader>
 
-    <div v-if="filtered.length" class="emp-grid">
+    <div v-if="filtered.length" class="employees-container">
       <div 
         v-for="e in filtered" 
         :key="e.id" 
-        class="employee-card"
-        :class="{ 'employee-card--admin': isProtectedUser(e) }"
-        :style="{ '--accent-color': e.avatar_color || '#1abc9c' }"
+        class="employee-row"
+        :class="{ 'employee-row--admin': isProtectedUser(e) }"
       >
-        <!-- Акцентная цветная полоса сверху -->
-        <div class="emp-card__accent"></div>
-        
-        <!-- Бейдж администратора -->
-        <div v-if="isProtectedUser(e)" class="emp-card__badge">
-          <i class="pi pi-shield"></i> Администратор
+        <!-- Аватар -->
+        <div class="emp-avatar" :style="{ backgroundColor: e.avatar_color || '#1abc9c' }">
+          {{ e.full_name.charAt(0) }}
         </div>
-        
-        <!-- Кнопки действий (в правом верхнем углу как в DepartmentCard) -->
-        <div v-if="canManage" class="emp-card__actions">
+
+        <!-- Информация о сотруднике -->
+        <div class="emp-info">
+          <div class="emp-name-wrapper">
+            <span class="emp-name">{{ e.full_name }}</span>
+            
+            <!-- Бейдж администратора (компактный) -->
+            <span v-if="isProtectedUser(e)" class="emp-badge">
+              <i class="pi pi-shield"></i> Администратор
+            </span>
+          </div>
+          
+          <div class="emp-details">
+            <span class="emp-dept">{{ getDepartmentName(e.department_id) }}</span>
+            <span v-if="e.email" class="emp-contact">
+              <i class="pi pi-envelope"></i> {{ e.email }}
+            </span>
+            <span v-if="e.phone" class="emp-contact">
+              <i class="pi pi-phone"></i> {{ e.phone }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Действия (всегда справа) -->
+        <div class="emp-actions">
           <Button 
+            v-if="canManage"
             icon="pi pi-pencil" 
             rounded 
             text 
@@ -137,9 +156,8 @@ onMounted(load)
             @click.stop="edit(e)"
           />
           
-          <!-- Кнопка удаления (не показываем для админа/себя) -->
           <Button 
-            v-if="!isProtectedUser(e)"
+            v-if="canManage && !isProtectedUser(e)"
             icon="pi pi-trash" 
             rounded 
             text 
@@ -149,9 +167,8 @@ onMounted(load)
             @click.stop="remove(e)"
           />
           
-          <!-- Блокировка удаления для админа -->
           <Button 
-            v-else
+            v-if="canManage && isProtectedUser(e)"
             icon="pi pi-lock" 
             rounded 
             text 
@@ -160,36 +177,6 @@ onMounted(load)
             class="action-btn locked"
             disabled
           />
-        </div>
-
-        <!-- Аватар -->
-        <div class="emp-card__avatar-wrapper">
-          <div class="emp-card__avatar" :style="{ backgroundColor: e.avatar_color || '#1abc9c' }">
-            {{ e.full_name.charAt(0) }}
-          </div>
-        </div>
-
-        <!-- ФИО -->
-        <div class="emp-card__name">{{ e.full_name }}</div>
-
-        <!-- Отдел -->
-        <div class="emp-card__dept">
-          {{ getDepartmentName(e.department_id) }}
-        </div>
-
-        <!-- Контакты -->
-        <div class="emp-card__contacts">
-          <div v-if="e.email" class="contact-item">
-            <i class="pi pi-envelope" />
-            <span>{{ e.email }}</span>
-          </div>
-          <div v-if="e.phone" class="contact-item">
-            <i class="pi pi-phone" />
-            <span>{{ e.phone }}</span>
-          </div>
-          <div v-if="!e.email && !e.phone" class="contact-item muted">
-            <span>Нет контактов</span>
-          </div>
         </div>
       </div>
     </div>
@@ -208,162 +195,158 @@ onMounted(load)
 </template>
 
 <style scoped>
-/* ===== СЕТКА (Аналогично DepartmentsPage) ===== */
-.emp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-
-/* ===== КАРТОЧКА СОТРУДНИКА (в стиле DepartmentCard) ===== */
-.employee-card {
-  position: relative;
-  background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid #eef2f6;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  padding: 28px 20px 20px;
+/* ===== КОНТЕЙНЕР ===== */
+.employees-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-  cursor: default;
-}
-.employee-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
-  border-color: #e0e7ef;
+  gap: 10px;
+  padding: 4px 0;
 }
 
-/* ===== СТИЛЬ ДЛЯ ЗАЩИЩЁННОГО АДМИНА ===== */
-.employee-card--admin {
-  background: #f8fafc;
-  border-color: #dbeafe;
-}
-.employee-card--admin .emp-card__accent {
-  background: #3b82f6 !important;
-}
-.employee-card--admin .emp-card__badge {
+/* ===== СТРОКА СОТРУДНИКА (Modern Clean Look) ===== */
+.employee-row {
   display: flex;
-}
-
-/* ===== БЕЙДЖ АДМИНИСТРАТОРА ===== */
-.emp-card__badge {
-  display: none;
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  background: #dbeafe;
-  color: #2563eb;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 20px;
   align-items: center;
-  gap: 6px;
-  z-index: 2;
+  gap: 16px;
+  background: #ffffff;
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 1px solid #f0f4f8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.emp-card__badge i { font-size: 13px; }
-
-/* ===== АКЦЕНТНАЯ ПОЛОСА СВЕРХУ ===== */
-.emp-card__accent {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: var(--accent-color, #1abc9c);
-  border-radius: 16px 16px 0 0;
-}
-
-/* ===== КНОПКИ ДЕЙСТВИЙ ===== */
-.emp-card__actions {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  gap: 4px;
-  z-index: 2;
-}
-.action-btn {
-  background: rgba(255, 255, 255, 0.7) !important;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  width: 32px !important;
-  height: 32px !important;
-  padding: 0 !important;
-}
-.action-btn:hover {
-  background: #ffffff !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-.action-btn.locked {
-  opacity: 0.5;
-  cursor: not-allowed;
+.employee-row:hover {
+  border-color: #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
 }
 
 /* ===== АВАТАР ===== */
-.emp-card__avatar-wrapper {
-  margin-bottom: 12px;
-}
-.emp-card__avatar {
-  width: 64px;
-  height: 64px;
+.emp-avatar {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  font-size: 24px;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  font-size: 16px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-/* ===== ТЕКСТОВЫЕ ДАННЫЕ ===== */
-.emp-card__name {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 4px;
-  text-align: center;
-}
-.emp-card__dept {
-  font-size: 14px;
-  color: #7f8c8d;
-  margin-bottom: 12px;
-  text-align: center;
-}
-
-/* ===== КОНТАКТЫ ===== */
-.emp-card__contacts {
+/* ===== ИНФОРМАЦИЯ (ФИО + Отдел + Контакты) ===== */
+.emp-info {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  width: 100%;
-  padding-top: 12px;
-  border-top: 1px solid #f1f5f9;
+  gap: 4px;
+  min-width: 0;
 }
-.contact-item {
+.emp-name-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #475569;
-  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
-.contact-item i {
-  color: #94a3b8;
-  font-size: 14px;
+.emp-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
 }
-.contact-item.muted {
-  color: #94a3b8;
+.emp-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
   font-size: 13px;
+  color: #7f8c8d;
+}
+.emp-dept {
+  background: #f1f5f9;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+  color: #334155;
+}
+.emp-contact {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.emp-contact i {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* ===== БЕЙДЖ АДМИНИСТРАТОРА ===== */
+.emp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #dbeafe;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+/* ===== КНОПКИ ДЕЙСТВИЙ ===== */
+.emp-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.action-btn {
+  width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  opacity: 0.6;
+  transition: opacity 0.2s, background 0.2s;
+}
+.employee-row:hover .action-btn {
+  opacity: 1;
+}
+.action-btn:hover {
+  background: #f1f5f9 !important;
+}
+.action-btn.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ===== АДАПТИВНОСТЬ ===== */
-@media (max-width: 1100px) { 
-  .emp-grid { grid-template-columns: repeat(2, 1fr); } 
-}
-@media (max-width: 720px) { 
-  .emp-grid { grid-template-columns: 1fr; }
-  .employee-card { padding: 20px 16px; }
-  .emp-card__avatar { width: 52px; height: 52px; font-size: 20px; }
+@media (max-width: 720px) {
+  .employee-row {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+    gap: 12px;
+  }
+  .emp-avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+  .emp-info {
+    width: 100%;
+  }
+  .emp-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .emp-actions {
+    width: 100%;
+    justify-content: flex-end;
+    border-top: 1px solid #f0f4f8;
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+  .action-btn {
+    opacity: 1;
+  }
 }
 </style>

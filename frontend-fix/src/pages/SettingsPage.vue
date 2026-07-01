@@ -21,7 +21,7 @@ const ROLE_LABEL: Record<string, string> = {
   employee: 'Сотрудник',
 }
 
-// Данные профиля
+// Данные профиля (связываем напрямую с auth.user)
 const fullName = ref(auth.user?.full_name ?? '')
 const email = ref(auth.user?.email ?? '')
 const phone = ref('+7 (999) 123-45-67')
@@ -57,30 +57,42 @@ const checks = computed(() => {
   }
 })
 
-// ===== СОХРАНЕНИЕ ЦВЕТА В ПРОФИЛЬ =====
-async function saveAppearance(): Promise<void> {
+// ===== СОХРАНЕНИЕ ИМЕНИ И ЦВЕТА (Обновляет верхний правый угол) =====
+async function saveProfile(): Promise<void> {
   try {
     if (auth.user) {
+      // 1. Обновляем локальные данные в сторе (Pinia), чтобы хедер перерисовался
+      auth.user.full_name = fullName.value
       auth.user.avatar_color = localAvatarColor.value
+      
+      // 2. Здесь должен быть реальный API-вызов для сохранения на сервер
+      // await UserApi.updateProfile({ full_name: fullName.value, avatar_color: localAvatarColor.value })
+
+      toast.add({ 
+        severity: 'success', 
+        summary: 'Сохранено', 
+        detail: 'Имя и данные профиля обновлены', 
+        life: 2000 
+      })
     }
-    toast.add({ 
-      severity: 'success', 
-      summary: 'Сохранено', 
-      detail: 'Цвет аватарки обновлён', 
-      life: 2000 
-    })
   } catch (error) {
     toast.add({ 
       severity: 'error', 
       summary: 'Ошибка', 
-      detail: 'Не удалось сохранить цвет', 
+      detail: 'Не удалось сохранить изменения', 
       life: 3000 
     })
   }
 }
 
-function saveProfile(): void {
-  toast.add({ severity: 'success', summary: 'Сохранено', detail: 'Настройки профиля обновлены', life: 2000 })
+// Сохранить только цвет (вызывается из вкладки Оформление)
+async function saveAppearance(): Promise<void> {
+  await saveProfile()
+}
+
+function formatPhone(phone: string): string {
+  // Простое форматирование для визуала
+  return phone
 }
 </script>
 
